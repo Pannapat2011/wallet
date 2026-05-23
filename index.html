@@ -1,1 +1,630 @@
+<!DOCTYPE html>
+<html lang="th" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mega Wallet - OriginOS Premium</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800;900&display=swap');
+        
+        body { 
+            font-family: 'Prompt', sans-serif; 
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        /* ซ่อน Scrollbar */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* แท็บคอนเทนต์ */
+        .tab-content { 
+            display: none; 
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.4s ease, transform 0.4s ease;
+        }
+        .tab-content.active { 
+            display: block; 
+            opacity: 1;
+            transform: translateY(0);
+            animation: fadeUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
 
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* แก้วใส (Glassmorphism) */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05);
+        }
+
+        .dark .glass-card {
+            background: rgba(30, 41, 59, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+        }
+
+        .origin-btn { transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); }
+        .origin-btn:active { transform: scale(0.95); }
+
+        /* Background Blobs */
+        .bg-blob {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(80px);
+            z-index: -1;
+            opacity: 0.6;
+            transition: all 1s ease;
+        }
+        .dark .bg-blob { opacity: 0.3; }
+
+        /* ================= แอนิเมชัน Splash Screen หรูๆ ================= */
+        #splash-screen {
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+        }
+        .splash-glow { animation: pulseGlow 3s infinite alternate; }
+        .splash-logo-anim { animation: floatLogo 1.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; transform: translateY(30px) scale(0.8); opacity: 0; }
+        .splash-text-anim { animation: fadeText 1.5s 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; transform: translateY(15px); opacity: 0; }
+        .splash-sub-anim { animation: fadeText 1.5s 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; transform: translateY(15px); opacity: 0; }
+        .splash-bar-anim { animation: loadBar 2s 0.6s cubic-bezier(0.8, 0, 0.2, 1) forwards; width: 0; }
+
+        @keyframes pulseGlow {
+            0% { opacity: 0.3; transform: scale(0.8); }
+            100% { opacity: 0.7; transform: scale(1.2); }
+        }
+        @keyframes floatLogo {
+            100% { transform: translateY(0) scale(1); opacity: 1; }
+        }
+        @keyframes fadeText {
+            100% { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes loadBar {
+            100% { width: 100%; }
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: { extend: { borderRadius: { '4xl': '2rem', '5xl': '2.5rem', } } }
+        }
+    </script>
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 min-h-screen relative overflow-hidden transition-colors duration-500">
+
+    <!-- ================= SPLASH SCREEN (หน้าโหลดแอป) ================= -->
+    <div id="splash-screen" class="fixed inset-0 z-[9999] bg-slate-950 flex flex-col items-center justify-center transition-all duration-1000">
+        <div class="relative flex flex-col items-center">
+            <!-- เอฟเฟกต์แสงเรืองรองด้านหลัง -->
+            <div class="splash-glow absolute inset-0 bg-gradient-to-tr from-indigo-600 via-purple-600 to-rose-500 rounded-full blur-[80px] w-64 h-64 -translate-x-1/2 -translate-y-1/2 left-1/2 top-1/2"></div>
+            
+            <!-- โลโก้ -->
+            <div class="splash-logo-anim w-28 h-28 rounded-[2.5rem] bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white text-6xl shadow-2xl shadow-indigo-500/50 mb-8 relative z-10 border border-white/20">
+                <i class="fa-solid fa-infinity"></i>
+            </div>
+            
+            <!-- ตัวหนังสือ -->
+            <h1 class="splash-text-anim text-4xl md:text-5xl font-black tracking-[0.2em] text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-200 to-slate-400 relative z-10 text-center">
+                ORIGIN<span class="text-indigo-400">WALLET</span>
+            </h1>
+            <p class="splash-sub-anim text-slate-400 tracking-[0.3em] mt-4 text-xs md:text-sm relative z-10 font-bold">PREMIUM EDITION</p>
+            
+            <!-- หลอดโหลด -->
+            <div class="w-48 h-1 bg-slate-800 rounded-full mt-12 overflow-hidden relative z-10 shadow-inner">
+                <div class="splash-bar-anim h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full shadow-[0_0_10px_rgba(99,102,241,0.8)]"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- พื้นหลังตกแต่งสไตล์ OriginOS -->
+    <div class="bg-blob bg-blue-300 dark:bg-indigo-900 w-96 h-96 top-[-10%] left-[-10%]"></div>
+    <div class="bg-blob bg-purple-300 dark:bg-purple-900 w-96 h-96 bottom-[10%] right-[-5%]"></div>
+    <div class="bg-blob bg-pink-200 dark:bg-rose-900 w-80 h-80 top-[40%] left-[20%]"></div>
+
+    <!-- Floating Navbar -->
+    <nav class="max-w-7xl mx-auto px-4 pt-6 pb-2 sticky top-0 z-50">
+        <div class="glass-card rounded-full px-6 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30">
+                    <i class="fa-solid fa-infinity text-xl"></i>
+                </div>
+                <span class="font-bold text-xl tracking-wide bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400">Origin<span class="font-black text-slate-800 dark:text-white">Wallet</span></span>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="toggleDarkMode()" class="origin-btn w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700">
+                    <i id="theme-icon" class="fa-solid fa-moon"></i>
+                </button>
+                <button onclick="exportCSV()" class="origin-btn hidden md:flex h-10 px-4 rounded-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 items-center justify-center text-sm font-semibold gap-2 hover:opacity-90 shadow-xl">
+                    <i class="fa-solid fa-cloud-arrow-down"></i> Export
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 relative z-10">
+        
+        <!-- Sidebar Menu -->
+        <aside class="lg:col-span-3">
+            <div class="glass-card rounded-[2.5rem] p-4 sticky top-28 shadow-xl shadow-slate-200/50 dark:shadow-none">
+                <div class="p-4 mb-4 text-center">
+                    <img src="https://api.dicebear.com/7.x/notionists/svg?seed=Punnapat&backgroundColor=e2e8f0" alt="Avatar" class="w-20 h-20 rounded-full mx-auto mb-3 border-4 border-white dark:border-slate-800 shadow-md">
+                    <h3 class="font-bold text-lg">My Wallet</h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">OriginOS Design</p>
+                </div>
+                <ul class="space-y-2">
+                    <li><button onclick="switchTab('dashboard')" id="nav-dashboard" class="origin-btn w-full text-left px-5 py-4 rounded-3xl bg-indigo-500 text-white font-medium flex items-center gap-4 shadow-lg shadow-indigo-500/25"><i class="fa-solid fa-cube text-lg w-6"></i> ภาพรวม</button></li>
+                    <li><button onclick="switchTab('transactions')" id="nav-transactions" class="origin-btn w-full text-left px-5 py-4 rounded-3xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium flex items-center gap-4"><i class="fa-solid fa-money-bill-transfer text-lg w-6"></i> จัดการรายการ</button></li>
+                    <li><button onclick="switchTab('tax')" id="nav-tax" class="origin-btn w-full text-left px-5 py-4 rounded-3xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium flex items-center gap-4"><i class="fa-solid fa-file-shield text-lg w-6"></i> คำนวณภาษี</button></li>
+                    <li><button onclick="switchTab('savings')" id="nav-savings" class="origin-btn w-full text-left px-5 py-4 rounded-3xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium flex items-center gap-4"><i class="fa-solid fa-bullseye text-lg w-6"></i> เป้าหมาย</button></li>
+                </ul>
+                <div class="mt-8 p-2">
+                    <button onclick="clearAllData()" class="origin-btn w-full text-left px-5 py-4 rounded-3xl text-rose-500 bg-rose-50 dark:bg-rose-500/10 hover:bg-rose-100 dark:hover:bg-rose-500/20 font-medium flex items-center gap-4"><i class="fa-solid fa-power-off text-lg w-6"></i> ล้างข้อมูล</button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="lg:col-span-9">
+            
+            <!-- TAB: Dashboard -->
+            <div id="tab-dashboard" class="tab-content active space-y-6">
+                <!-- Bento Grid Top -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+                    <div class="col-span-2 md:col-span-2 glass-card rounded-[2.5rem] p-6 relative overflow-hidden group bg-gradient-to-br from-slate-900 to-indigo-900 text-white border-0 shadow-2xl shadow-indigo-900/30">
+                        <div class="absolute -right-6 -top-6 w-32 h-32 bg-white/10 rounded-full blur-2xl group-hover:bg-white/20 transition-all duration-500"></div>
+                        <p class="text-sm text-indigo-200 mb-2 font-medium">ยอดเงินคงเหลือทั้งหมด</p>
+                        <h2 class="text-4xl md:text-5xl font-black tracking-tight" id="dash-balance">฿0.00</h2>
+                        <div class="mt-6 flex gap-2">
+                            <button onclick="switchTab('transactions')" class="origin-btn bg-white/20 hover:bg-white/30 backdrop-blur-md px-4 py-2 rounded-full text-sm font-medium"><i class="fa-solid fa-plus mr-1"></i> เพิ่มรายการ</button>
+                        </div>
+                    </div>
+                    
+                    <div class="col-span-1 glass-card rounded-[2rem] p-5 flex flex-col justify-between group hover:scale-[1.02] transition-transform">
+                        <div class="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-500 flex items-center justify-center text-lg mb-4">
+                            <i class="fa-solid fa-arrow-down"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 font-medium mb-1">รายรับ</p>
+                            <h2 class="text-xl font-bold text-slate-800 dark:text-white" id="dash-income">฿0.00</h2>
+                        </div>
+                    </div>
+
+                    <div class="col-span-1 glass-card rounded-[2rem] p-5 flex flex-col justify-between group hover:scale-[1.02] transition-transform">
+                        <div class="w-10 h-10 rounded-full bg-rose-100 dark:bg-rose-500/20 text-rose-500 flex items-center justify-center text-lg mb-4">
+                            <i class="fa-solid fa-arrow-up"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs text-slate-500 dark:text-slate-400 font-medium mb-1">รายจ่าย</p>
+                            <h2 class="text-xl font-bold text-slate-800 dark:text-white" id="dash-expense">฿0.00</h2>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+                    <div class="md:col-span-5 glass-card rounded-[2.5rem] p-6 flex flex-col items-center justify-center min-h-[300px]">
+                        <h3 class="font-bold text-lg w-full text-left mb-2">สัดส่วนการเงิน</h3>
+                        <div class="w-full h-56 relative">
+                            <canvas id="mainChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="md:col-span-7 glass-card rounded-[2.5rem] p-6">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="font-bold text-lg">รายการล่าสุด</h3>
+                            <button onclick="switchTab('transactions')" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 transition">
+                                <i class="fa-solid fa-chevron-right text-xs"></i>
+                            </button>
+                        </div>
+                        <ul id="recent-list" class="space-y-4">
+                            <!-- Injected by JS -->
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: Transactions -->
+            <div id="tab-transactions" class="tab-content space-y-6">
+                <div class="glass-card rounded-[2.5rem] p-6 md:p-8">
+                    <h3 class="text-2xl font-bold mb-6">เพิ่มรายการใหม่</h3>
+                    <form id="tx-form" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div class="md:col-span-2">
+                            <input type="text" id="tx-text" required placeholder="ชื่อรายการ เช่น ค่าอาหาร..." class="w-full bg-slate-50 dark:bg-slate-800/50 border-none px-5 py-4 rounded-2xl focus:ring-4 focus:ring-indigo-500/20 outline-none transition-all dark:text-white placeholder:text-slate-400">
+                        </div>
+                        <div>
+                            <input type="number" id="tx-amount" required min="0.01" step="0.01" placeholder="จำนวนเงิน" class="w-full bg-slate-50 dark:bg-slate-800/50 border-none px-5 py-4 rounded-2xl focus:ring-4 focus:ring-indigo-500/20 outline-none transition-all dark:text-white placeholder:text-slate-400">
+                        </div>
+                        <div>
+                            <select id="tx-type" class="w-full bg-slate-50 dark:bg-slate-800/50 border-none px-5 py-4 rounded-2xl focus:ring-4 focus:ring-indigo-500/20 outline-none transition-all dark:text-white appearance-none font-medium">
+                                <option value="expense">รายจ่าย (-)</option>
+                                <option value="income">รายรับ (+)</option>
+                            </select>
+                        </div>
+                        <div class="md:col-span-4 mt-2">
+                            <button type="submit" class="origin-btn w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold py-4 rounded-2xl shadow-xl shadow-slate-900/20 dark:shadow-white/10 text-lg">
+                                บันทึกรายการ
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="glass-card rounded-[2.5rem] p-6 md:p-8">
+                    <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+                        <h3 class="text-2xl font-bold">ประวัติทั้งหมด</h3>
+                        <div class="relative w-full md:w-72">
+                            <i class="fa-solid fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                            <input type="text" id="search-tx" placeholder="ค้นหา..." class="w-full bg-slate-50 dark:bg-slate-800/50 border-none pl-12 pr-4 py-3 rounded-full focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all dark:text-white">
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto no-scrollbar pb-4">
+                        <table class="w-full text-left whitespace-nowrap">
+                            <thead>
+                                <tr class="text-slate-400 text-sm font-medium border-b border-slate-200 dark:border-slate-700/50">
+                                    <th class="pb-3 px-4">วันที่</th>
+                                    <th class="pb-3 px-4">รายการ</th>
+                                    <th class="pb-3 px-4">ประเภท</th>
+                                    <th class="pb-3 px-4 text-right">ยอดเงิน</th>
+                                    <th class="pb-3 px-4 text-center">จัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="full-tx-list" class="text-sm"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: Tax Calculator -->
+            <div id="tab-tax" class="tab-content space-y-6">
+                <div class="glass-card rounded-[2.5rem] p-6 md:p-8 overflow-hidden relative">
+                    <div class="absolute -right-20 -bottom-20 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl"></div>
+                    
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-16 h-16 bg-gradient-to-br from-blue-400 to-indigo-600 rounded-[1.5rem] flex items-center justify-center text-white text-3xl shadow-lg shadow-indigo-500/30">
+                            <i class="fa-solid fa-calculator"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-3xl font-bold">คำนวณภาษี (ภ.ง.ด.90/91)</h2>
+                            <p class="text-slate-500 dark:text-slate-400">กรอกรายได้ทั้งปีเพื่อประเมินภาษีแบบคร่าวๆ</p>
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 relative z-10">
+                        <div class="space-y-5">
+                            <div class="bg-white/50 dark:bg-slate-800/50 p-5 rounded-3xl border border-white/40 dark:border-slate-700">
+                                <label class="block text-sm font-bold text-slate-500 dark:text-slate-400 mb-2">รายได้รวมทั้งปี (กรอกเองได้เลย)</label>
+                                <div class="flex items-center gap-3">
+                                    <span class="text-xl text-emerald-500"><i class="fa-solid fa-sack-dollar"></i></span>
+                                    <input type="number" id="tax-income" placeholder="ตัวอย่าง: 600000" class="w-full bg-transparent border-none text-2xl font-black text-slate-800 dark:text-white outline-none focus:ring-0">
+                                </div>
+                            </div>
+                            <div class="bg-white/50 dark:bg-slate-800/50 p-5 rounded-3xl border border-white/40 dark:border-slate-700 opacity-80">
+                                <label class="block text-sm font-bold text-slate-500 dark:text-slate-400 mb-2">หักค่าใช้จ่ายเหมา (50% สูงสุด 100k)</label>
+                                <input type="number" value="100000" class="w-full bg-transparent border-none text-xl font-bold text-slate-800 dark:text-white outline-none" readonly>
+                            </div>
+                            <div class="bg-white/50 dark:bg-slate-800/50 p-5 rounded-3xl border border-white/40 dark:border-slate-700 opacity-80">
+                                <label class="block text-sm font-bold text-slate-500 dark:text-slate-400 mb-2">หักลดหย่อนส่วนตัว</label>
+                                <input type="number" value="60000" class="w-full bg-transparent border-none text-xl font-bold text-slate-800 dark:text-white outline-none" readonly>
+                            </div>
+                            <button onclick="calculateTax()" class="origin-btn w-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-bold py-4 rounded-2xl shadow-xl shadow-indigo-500/30 text-lg">คำนวณยอดภาษี</button>
+                        </div>
+                        
+                        <div class="bg-slate-900 dark:bg-black p-8 rounded-[2.5rem] shadow-2xl flex flex-col justify-center relative overflow-hidden">
+                            <div class="absolute top-0 right-0 w-32 h-32 bg-purple-500/20 blur-2xl rounded-full"></div>
+                            
+                            <h3 class="text-sm font-medium text-slate-400 mb-1">เงินได้สุทธิ (หลังหักลบแล้ว)</h3>
+                            <h2 class="text-3xl font-bold text-white mb-8" id="tax-net-income">฿0.00</h2>
+                            
+                            <div class="h-px w-full bg-slate-800 mb-8"></div>
+                            
+                            <h3 class="text-sm font-medium text-rose-400 mb-1"><i class="fa-solid fa-triangle-exclamation mr-1"></i> ภาษีที่คาดว่าต้องชำระ</h3>
+                            <h1 class="text-5xl lg:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-rose-400 to-orange-400" id="tax-result">฿0.00</h1>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: Savings Goals -->
+            <div id="tab-savings" class="tab-content space-y-6">
+                <div class="glass-card rounded-[2.5rem] p-6 md:p-8">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-16 h-16 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-[1.5rem] flex items-center justify-center text-white text-3xl shadow-lg shadow-emerald-500/30">
+                            <i class="fa-solid fa-piggy-bank"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-3xl font-bold">เป้าหมายการออม</h2>
+                            <p class="text-slate-500 dark:text-slate-400">สร้างเป้าหมาย อัพรูปของที่อยากได้ไว้ดูเป็นแรงบันดาลใจ</p>
+                        </div>
+                    </div>
+
+                    <form id="goal-form" class="flex flex-col md:flex-row gap-4 mb-8 bg-white/40 dark:bg-slate-800/40 p-4 rounded-3xl border border-white/50 dark:border-slate-700 items-center">
+                        <label class="w-16 h-16 rounded-2xl bg-slate-200 dark:bg-slate-700 flex items-center justify-center cursor-pointer hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors shrink-0 overflow-hidden relative shadow-inner" title="อัพโหลดรูปเป้าหมาย">
+                            <i class="fa-solid fa-camera text-slate-400 text-xl" id="goal-img-icon"></i>
+                            <img id="goal-img-preview" class="absolute inset-0 w-full h-full object-cover hidden">
+                            <input type="file" id="goal-image" accept="image/*" class="hidden" onchange="previewGoalImage(this)">
+                        </label>
+                        
+                        <div class="w-full flex-1 flex flex-col md:flex-row gap-4">
+                            <input type="text" id="goal-name" required placeholder="ชื่อเป้าหมาย (เช่น ซื้อ iQOO 13)" class="flex-1 bg-transparent border-b border-slate-300 dark:border-slate-600 px-2 py-3 focus:border-indigo-500 dark:focus:border-indigo-500 outline-none font-medium dark:text-white placeholder:text-slate-400">
+                            <input type="number" id="goal-amount" required placeholder="ยอดเป้าหมาย (฿)" class="w-full md:w-1/3 bg-transparent border-b border-slate-300 dark:border-slate-600 px-2 py-3 focus:border-indigo-500 dark:focus:border-indigo-500 outline-none font-bold dark:text-white placeholder:text-slate-400">
+                        </div>
+                        <button type="submit" class="origin-btn w-full md:w-auto bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-8 py-4 rounded-2xl font-bold shadow-lg">สร้าง</button>
+                    </form>
+                    
+                    <div id="goals-list" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Goals rendered here -->
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        // ================= Splash Screen Logic =================
+        window.addEventListener('load', () => {
+            // ทำให้ body เลื่อนไม่ได้ตอนโหลด
+            document.body.classList.add('overflow-hidden');
+            const splash = document.getElementById('splash-screen');
+            
+            // ให้รันทุกครั้งที่ Refresh เพื่อความหรูหรา
+            setTimeout(() => {
+                splash.style.opacity = '0';
+                splash.style.transform = 'scale(1.1)';
+                splash.style.pointerEvents = 'none';
+                
+                setTimeout(() => {
+                    splash.style.display = 'none';
+                    document.body.classList.remove('overflow-hidden');
+                }, 1000); // รอจังหวะ CSS transition จบ
+            }, 2600); // โชว์หน้านี้ 2.6 วินาที
+        });
+
+        // ================= Core State =================
+        let transactions = JSON.parse(localStorage.getItem('origin_transactions')) || [];
+        let goals = JSON.parse(localStorage.getItem('origin_goals')) || [];
+        let isDarkMode = localStorage.getItem('origin_theme') === 'dark';
+        let mainChartInstance = null;
+
+        // Init Theme
+        if (isDarkMode) {
+            document.documentElement.classList.add('dark');
+            document.getElementById('theme-icon').classList.replace('fa-moon', 'fa-sun');
+        }
+
+        // ================= Navigation =================
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            setTimeout(() => document.getElementById(`tab-${tabId}`).classList.add('active'), 50);
+            
+            ['dashboard', 'transactions', 'tax', 'savings'].forEach(id => {
+                document.getElementById(`nav-${id}`).className = "origin-btn w-full text-left px-5 py-4 rounded-3xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 font-medium flex items-center gap-4";
+            });
+            document.getElementById(`nav-${tabId}`).className = "origin-btn w-full text-left px-5 py-4 rounded-3xl bg-indigo-500 text-white font-medium flex items-center gap-4 shadow-lg shadow-indigo-500/25";
+            
+            if (tabId === 'dashboard') updateDashboard();
+            if (tabId === 'tax') updateTaxData();
+        }
+
+        function toggleDarkMode() {
+            isDarkMode = !isDarkMode;
+            const icon = document.getElementById('theme-icon');
+            if (isDarkMode) {
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('origin_theme', 'dark');
+                icon.classList.replace('fa-moon', 'fa-sun');
+            } else {
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('origin_theme', 'light');
+                icon.classList.replace('fa-sun', 'fa-moon');
+            }
+            if(mainChartInstance) updateDashboard(); 
+        }
+
+        // ================= Utils =================
+        const formatMoney = (num) => new Intl.NumberFormat('th-TH', { style: 'currency', currency: 'THB' }).format(num);
+        const formatNum = (num) => Number(num).toLocaleString('th-TH', {minimumFractionDigits: 2});
+
+        // ================= Transactions =================
+        document.getElementById('tx-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const text = document.getElementById('tx-text').value;
+            const amount = parseFloat(document.getElementById('tx-amount').value);
+            const type = document.getElementById('tx-type').value;
+
+            transactions.push({ id: Date.now(), text, amount: type === 'expense' ? -Math.abs(amount) : Math.abs(amount), date: new Date().toLocaleString('th-TH') });
+            localStorage.setItem('origin_transactions', JSON.stringify(transactions));
+            
+            document.getElementById('tx-text').value = ''; document.getElementById('tx-amount').value = '';
+            Swal.fire({ toast: true, position: 'top', icon: 'success', title: 'เพิ่มรายการแล้ว!', showConfirmButton: false, timer: 1500, background: isDarkMode ? '#1e293b' : '#fff', color: isDarkMode ? '#fff' : '#000' });
+            renderTransactions(); updateDashboard();
+        });
+
+        function deleteTx(id) {
+            transactions = transactions.filter(t => t.id !== id);
+            localStorage.setItem('origin_transactions', JSON.stringify(transactions));
+            renderTransactions(); updateDashboard();
+        }
+
+        function renderTransactions(filterText = '') {
+            const list = document.getElementById('full-tx-list');
+            const recentList = document.getElementById('recent-list');
+            list.innerHTML = ''; recentList.innerHTML = '';
+
+            let sorted = [...transactions].sort((a, b) => b.id - a.id);
+            let filtered = sorted.filter(t => t.text.toLowerCase().includes(filterText.toLowerCase()));
+
+            if(filtered.length === 0) { list.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-slate-400">ไม่มีข้อมูลการเงิน</td></tr>`; }
+            else {
+                filtered.forEach(t => {
+                    const isExp = t.amount < 0;
+                    list.innerHTML += `
+                        <tr class="group hover:bg-white/50 dark:hover:bg-slate-800/50 transition-colors">
+                            <td class="py-4 px-4 text-slate-500 dark:text-slate-400 font-medium rounded-l-2xl">${t.date.split(' ')[0]}</td>
+                            <td class="py-4 px-4 font-bold text-slate-800 dark:text-slate-200">${t.text}</td>
+                            <td class="py-4 px-4"><span class="${isExp ? 'bg-rose-100 dark:bg-rose-500/20 text-rose-500' : 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-500'} px-3 py-1 rounded-full text-xs font-bold">${isExp ? 'รายจ่าย' : 'รายรับ'}</span></td>
+                            <td class="py-4 px-4 text-right font-black ${isExp ? 'text-slate-800 dark:text-white' : 'text-emerald-500'}">${isExp ? '-' : '+'}${formatNum(Math.abs(t.amount))}</td>
+                            <td class="py-4 px-4 text-center rounded-r-2xl"><button onclick="deleteTx(${t.id})" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/20 transition origin-btn"><i class="fa-solid fa-trash"></i></button></td>
+                        </tr>`;
+                });
+            }
+
+            if(sorted.length === 0) { recentList.innerHTML = `<div class="text-center py-6 text-slate-400 text-sm">ยังไม่มีรายการล่าสุด</div>`; }
+            else {
+                sorted.slice(0, 4).forEach(t => {
+                    const isExp = t.amount < 0;
+                    recentList.innerHTML += `
+                        <li class="flex justify-between items-center p-4 bg-white/50 dark:bg-slate-800/50 rounded-2xl hover:scale-[1.02] transition-transform cursor-default border border-white/40 dark:border-slate-700/50">
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 rounded-full ${isExp ? 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300' : 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-500'} flex items-center justify-center text-lg shadow-sm"><i class="fa-solid ${isExp ? 'fa-cart-shopping' : 'fa-hand-holding-dollar'}"></i></div>
+                                <div><p class="font-bold text-slate-800 dark:text-slate-200">${t.text}</p><p class="text-xs text-slate-400">${t.date.split(' ')[0]}</p></div>
+                            </div>
+                            <span class="font-black text-lg ${isExp ? 'text-slate-800 dark:text-white' : 'text-emerald-500'}">${isExp ? '-' : '+'}${formatNum(Math.abs(t.amount))}</span>
+                        </li>`;
+                });
+            }
+        }
+
+        document.getElementById('search-tx').addEventListener('input', (e) => renderTransactions(e.target.value));
+
+        function updateDashboard() {
+            const amounts = transactions.map(t => t.amount);
+            const total = amounts.reduce((acc, item) => (acc += item), 0);
+            const income = amounts.filter(item => item > 0).reduce((acc, item) => (acc += item), 0);
+            const expense = amounts.filter(item => item < 0).reduce((acc, item) => (acc += item), 0) * -1;
+
+            document.getElementById('dash-balance').innerText = formatMoney(total);
+            document.getElementById('dash-income').innerText = formatMoney(income);
+            document.getElementById('dash-expense').innerText = formatMoney(expense);
+
+            const ctx = document.getElementById('mainChart').getContext('2d');
+            if (mainChartInstance) mainChartInstance.destroy();
+            Chart.defaults.color = isDarkMode ? '#94a3b8' : '#64748b'; Chart.defaults.font.family = "'Prompt', sans-serif"; Chart.defaults.font.weight = 'bold';
+
+            if (income === 0 && expense === 0) {
+                mainChartInstance = new Chart(ctx, { type: 'doughnut', data: { labels: ['ไม่มีข้อมูล'], datasets: [{ data: [1], backgroundColor: [isDarkMode ? '#334155' : '#e2e8f0'], borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false, cutout: '80%', plugins: { tooltip: {enabled: false} } } });
+            } else {
+                mainChartInstance = new Chart(ctx, { type: 'doughnut', data: { labels: ['รายรับ', 'รายจ่าย'], datasets: [{ data: [income, expense], backgroundColor: ['#10b981', isDarkMode ? '#f43f5e' : '#334155'], borderWidth: 0, hoverOffset: 10, borderRadius: 10 }] }, options: { responsive: true, maintainAspectRatio: false, cutout: '75%', plugins: { legend: { display: false } } } });
+            }
+        }
+
+        // ================= Tax =================
+        function updateTaxData() {
+            document.getElementById('tax-income').value = ''; document.getElementById('tax-net-income').innerText = "฿0.00"; document.getElementById('tax-result').innerText = "฿0.00";
+        }
+
+        function calculateTax() {
+            const income = parseFloat(document.getElementById('tax-income').value) || 0;
+            let netIncome = income - 100000 - 60000;
+            if (netIncome < 0) netIncome = 0;
+            document.getElementById('tax-net-income').innerText = formatMoney(netIncome);
+
+            let tax = 0; let calcNet = netIncome;
+            if (calcNet > 5000000) { tax += (calcNet - 5000000) * 0.35; calcNet = 5000000; }
+            if (calcNet > 2000000) { tax += (calcNet - 2000000) * 0.30; calcNet = 2000000; }
+            if (calcNet > 1000000) { tax += (calcNet - 1000000) * 0.25; calcNet = 1000000; }
+            if (calcNet > 750000)  { tax += (calcNet - 750000) * 0.20; calcNet = 750000; }
+            if (calcNet > 500000)  { tax += (calcNet - 500000) * 0.15; calcNet = 500000; }
+            if (calcNet > 300000)  { tax += (calcNet - 300000) * 0.10; calcNet = 300000; }
+            if (calcNet > 150000)  { tax += (calcNet - 150000) * 0.05; }
+            
+            const el = document.getElementById('tax-result'); el.innerText = formatMoney(tax); el.classList.add('scale-110'); setTimeout(() => el.classList.remove('scale-110'), 200);
+        }
+
+        // ================= Savings Goals =================
+        function previewGoalImage(input) {
+            const preview = document.getElementById('goal-img-preview'); const icon = document.getElementById('goal-img-icon');
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) { preview.src = e.target.result; preview.classList.remove('hidden'); icon.classList.add('hidden'); }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        document.getElementById('goal-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const name = document.getElementById('goal-name').value; const amount = parseFloat(document.getElementById('goal-amount').value);
+            const imageFile = document.getElementById('goal-image').files[0];
+
+            if (imageFile) { const reader = new FileReader(); reader.onload = function(e) { saveNewGoal(name, amount, e.target.result); }; reader.readAsDataURL(imageFile); } 
+            else { saveNewGoal(name, amount, null); }
+        });
+
+        function saveNewGoal(name, amount, imageData) {
+            goals.push({ id: Date.now(), name, target: amount, saved: 0, image: imageData });
+            localStorage.setItem('origin_goals', JSON.stringify(goals));
+            document.getElementById('goal-name').value = ''; document.getElementById('goal-amount').value = ''; document.getElementById('goal-image').value = '';
+            document.getElementById('goal-img-preview').classList.add('hidden'); document.getElementById('goal-img-icon').classList.remove('hidden');
+            renderGoals();
+        }
+
+        function addGoalMoney(id, amount) {
+            const goal = goals.find(g => g.id === id);
+            if(goal) {
+                goal.saved += amount; if(goal.saved > goal.target) goal.saved = goal.target;
+                localStorage.setItem('origin_goals', JSON.stringify(goals));
+                transactions.push({ id: Date.now(), text: `💰 ออมเงินเป้าหมาย: ${goal.name}`, amount: -amount, date: new Date().toLocaleString('th-TH')});
+                localStorage.setItem('origin_transactions', JSON.stringify(transactions));
+                renderTransactions(); updateDashboard(); renderGoals();
+                Swal.fire({ toast: true, position: 'top', icon: 'success', title: 'เก็บเงินเพิ่มแล้ว!', showConfirmButton: false, timer: 1000, background: isDarkMode ? '#1e293b' : '#fff', color: isDarkMode ? '#fff' : '#000' });
+            }
+        }
+
+        function deleteGoal(id) { goals = goals.filter(g => g.id !== id); localStorage.setItem('origin_goals', JSON.stringify(goals)); renderGoals(); }
+
+        function renderGoals() {
+            const list = document.getElementById('goals-list'); list.innerHTML = '';
+            goals.forEach(g => {
+                const percent = Math.min((g.saved / g.target) * 100, 100).toFixed(1);
+                const imageHtml = g.image ? `<img src="${g.image}" class="w-14 h-14 rounded-2xl object-cover shrink-0 border border-slate-200 dark:border-slate-600 shadow-sm">` : `<div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-slate-700 dark:to-slate-600 flex items-center justify-center shrink-0 shadow-sm"><i class="fa-solid fa-bullseye text-xl text-indigo-500 dark:text-indigo-400"></i></div>`;
+                list.innerHTML += `
+                    <div class="bg-white/60 dark:bg-slate-800/60 p-6 rounded-[2rem] border border-white/50 dark:border-slate-700 relative overflow-hidden group">
+                        ${percent >= 100 ? '<div class="absolute -right-4 -top-4 w-20 h-20 bg-emerald-500 text-white flex items-end justify-center pb-2 pl-2 rotate-45 font-bold shadow-lg z-10"><i class="fa-solid fa-check"></i></div>' : ''}
+                        <div class="flex justify-between items-start mb-4 relative z-20">
+                            <div class="flex items-center gap-4">${imageHtml}<div><h4 class="font-bold text-lg leading-tight">${g.name}</h4><p class="text-sm text-slate-500 dark:text-slate-400 mt-1">${formatNum(g.saved)} / ${formatNum(g.target)} ฿</p></div></div>
+                            <button onclick="deleteGoal(${g.id})" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-400 hover:text-rose-500 hover:bg-rose-50 origin-btn flex items-center justify-center shrink-0"><i class="fa-solid fa-xmark"></i></button>
+                        </div>
+                        <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-3 mb-6 relative overflow-hidden"><div class="bg-gradient-to-r from-emerald-400 to-teal-500 h-3 rounded-full transition-all duration-1000" style="width: ${percent}%"></div></div>
+                        <div class="flex gap-2 relative z-20">
+                            <button onclick="addGoalMoney(${g.id}, 100)" class="origin-btn flex-1 bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 text-slate-700 dark:text-white py-2 rounded-xl text-sm font-bold shadow-sm border border-slate-100 dark:border-slate-600">+100</button>
+                            <button onclick="addGoalMoney(${g.id}, 500)" class="origin-btn flex-1 bg-white dark:bg-slate-700 hover:bg-slate-50 dark:hover:bg-slate-600 text-slate-700 dark:text-white py-2 rounded-xl text-sm font-bold shadow-sm border border-slate-100 dark:border-slate-600">+500</button>
+                            <button onclick="addGoalMoney(${g.id}, 1000)" class="origin-btn flex-1 bg-slate-900 dark:bg-white text-white dark:text-slate-900 py-2 rounded-xl text-sm font-bold shadow-md">+1,000</button>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        // ================= Extras =================
+        function exportCSV() {
+            if(transactions.length === 0) return Swal.fire({title:'ไม่มีข้อมูล', text:'ยังไม่มีรายการให้โหลดเลยเพื่อน', icon:'warning', background: isDarkMode ? '#1e293b' : '#fff', color: isDarkMode ? '#fff' : '#000'});
+            let csvContent = "data:text/csv;charset=utf-8,\uFEFFวันที่,รายการ,ประเภท,จำนวนเงิน\n";
+            transactions.forEach(t => { let type = t.amount > 0 ? "รายรับ" : "รายจ่าย"; csvContent += `"${t.date}","${t.text}","${type}","${t.amount}"\n`; });
+            const encodedUri = encodeURI(csvContent); const link = document.createElement("a"); link.setAttribute("href", encodedUri); link.setAttribute("download", `OriginWallet_Export_${new Date().getTime()}.csv`);
+            document.body.appendChild(link); link.click(); document.body.removeChild(link);
+        }
+
+        function clearAllData() {
+            Swal.fire({
+                title: 'ล้างข้อมูลทั้งหมด?', text: "ข้อมูลกระเป๋าตังค์และเป้าหมายจะหายเกลี้ยง กู้ไม่ได้นะเว้ย!", icon: 'warning', showCancelButton: true, confirmButtonColor: '#f43f5e', cancelButtonColor: '#64748b', confirmButtonText: 'ลบทิ้งเลย!', cancelButtonText: 'ยกเลิก', background: isDarkMode ? '#1e293b' : '#fff', color: isDarkMode ? '#fff' : '#000'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    localStorage.removeItem('origin_transactions'); localStorage.removeItem('origin_goals'); transactions = []; goals = [];
+                    renderTransactions(); updateDashboard(); renderGoals();
+                    Swal.fire({title:'ลบเกลี้ยง!', icon:'success', showConfirmButton: false, timer: 1500, background: isDarkMode ? '#1e293b' : '#fff', color: isDarkMode ? '#fff' : '#000'});
+                }
+            })
+        }
+
+        // ================= Init App =================
+        renderTransactions(); updateDashboard(); renderGoals();
+    </script>
+</body>
+</html>
